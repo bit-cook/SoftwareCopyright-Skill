@@ -334,6 +334,8 @@ def read_readme(project: Path) -> str:
 
 def extract_requirement_bullets(text: str) -> list[str]:
     wanted = ("python", "node", "docker", "compose", "postgres", "redis", "chrome", "edge", "safari")
+    # Patterns that indicate a feature description rather than a runtime requirement.
+    _feature_start = re.compile(r"^(?:[一-鿿]|L\d|P\d|[A-Z]\d\s)")
     bullets: list[str] = []
     for line in text.splitlines():
         match = re.match(r"\s*[-*]\s+(.+)", line)
@@ -341,6 +343,10 @@ def extract_requirement_bullets(text: str) -> list[str]:
             continue
         item = match.group(1).strip()
         if any(key in item.lower() for key in wanted) and item not in bullets:
+            if len(item) > 80:
+                continue
+            if _feature_start.match(item) and "（" in item:
+                continue
             bullets.append(item)
     return bullets[:8]
 
