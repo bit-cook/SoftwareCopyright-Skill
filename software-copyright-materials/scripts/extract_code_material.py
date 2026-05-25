@@ -7,7 +7,7 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from common import COPYRIGHT_CODE_EXTS, FRONTEND_EXTS, ensure_dir, iter_project_files, looks_binary, read_json, read_text, rel, safe_filename, write_json
+from common import COPYRIGHT_CODE_EXTS, FRONTEND_EXTS, ensure_dir, is_known_config_file, iter_project_files, looks_binary, read_json, read_text, rel, safe_filename, write_json
 
 
 LINES_PER_PAGE = 50
@@ -51,6 +51,8 @@ def category_weight(path: Path, project: Path) -> tuple[int, str]:
 
 def should_skip_file(path: Path) -> bool:
     if path.suffix.lower() not in COPYRIGHT_CODE_EXTS:
+        return True
+    if is_known_config_file(path):
         return True
     if looks_binary(path):
         return True

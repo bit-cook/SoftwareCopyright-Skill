@@ -235,10 +235,6 @@ def check_environment_gate(out: Path) -> None:
 
 def infer_language(extension_counts: Counter[str], frameworks: list[str]) -> str:
     langs: list[str] = []
-    if "Vue" in frameworks:
-        langs.append("Vue")
-    if "React" in frameworks or "Next.js" in frameworks:
-        langs.append("React")
     if extension_counts.get(".ts") or extension_counts.get(".tsx"):
         langs.append("TypeScript")
     if extension_counts.get(".js") or extension_counts.get(".jsx"):

@@ -49,6 +49,30 @@ CODE_EXTS = {
     ".md",
 }
 
+KNOWN_CONFIG_FILES = {
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "tsconfig.node.json",
+    "tsconfig.app.json",
+    "jsconfig.json",
+    ".eslintrc.json",
+    ".prettierrc.json",
+    "babel.config.json",
+    "angular.json",
+    "composer.json",
+    "manifest.json",
+    "app.json",
+    "project.json",
+    "workspace.json",
+    "nx.json",
+    "lerna.json",
+    "turbo.json",
+    ".swcrc",
+    "tslint.json",
+    "stylelintrc.json",
+}
+
 FRONTEND_EXTS = {
     ".vue",
     ".ts",
@@ -161,6 +185,11 @@ def count_text_lines(path: Path, skip_blank: bool = True) -> int:
     if skip_blank:
         return sum(1 for line in text.splitlines() if line.strip())
     return len(text.splitlines())
+
+
+def is_known_config_file(path: Path) -> bool:
+    """Return True for well-known config files that shouldn't count as source code."""
+    return path.name in KNOWN_CONFIG_FILES
 
 
 def looks_binary(path: Path) -> bool:

@@ -24,6 +24,9 @@ FIELD_ORDER = [
     "著作权人",
     "开发完成日期",
     "首次发表日期",
+    "权利取得方式",
+    "权利范围",
+    "开发情况说明",
     "开发的硬件环境",
     "运行的硬件环境",
     "开发该软件的操作系统",
@@ -166,7 +169,7 @@ def build_fields(
     hardware_hint = current_hardware_environment()
     dev_os_hint = current_operating_system()
     version_hint = version_confirmation_hint(analysis, version)
-    software_name_hint = f"待用户确认（建议：{software_name}；请确认最终申报的软件全称）"
+    software_name_hint = f"待用户确认（建议：{software_name}；请确认最终软件全称）"
 
     defaults = {
         "软件全称": software_name_hint,
@@ -174,6 +177,9 @@ def build_fields(
         "著作权人": "待用户确认",
         "开发完成日期": "待用户确认",
         "首次发表日期": "待用户确认",
+        "权利取得方式": (business.get("rights_acquisition") or "原始取得") if business else "原始取得",
+        "权利范围": (business.get("rights_scope") or "全部权利") if business else "全部权利",
+        "开发情况说明": (business.get("development_situation") or "独立开发") if business else "独立开发",
         "开发的硬件环境": hardware_hint,
         "运行的硬件环境": hardware_hint,
         "开发该软件的操作系统": dev_os_hint,
@@ -181,14 +187,14 @@ def build_fields(
         "该软件的运行平台 / 操作系统": infer_runtime_os(analysis),
         "软件运行支撑环境 / 支持软件": infer_runtime_support(analysis, project),
         "编程语言": language,
-        "源程序量": str(analysis.get("source", {}).get("total_line_count") or analysis.get("source", {}).get("line_count") or manifest.get("selected_source_line_count") or "待用户确认"),
-        "开发目的": business.get("application_purpose") if business else f"建设{software_name}，为用户提供稳定、便捷的信息化操作能力，提升相关业务处理效率。",
-        "面向领域 / 行业": business.get("industry") if business else "待用户确认",
-        "软件的主要功能": business.get("main_functions") if business and business.get("main_functions") else summarize_features(analysis, software_name, business),
-        "技术特点": business.get("technical_characteristics") if business else f"系统采用{framework_text}构建前端界面，结合模块化组件、路由组织、接口封装和状态管理实现业务功能，具备较好的可维护性和扩展性。",
-        "软件的技术特点选项": business.get("software_technical_option") if business else "应用软件",
+        "源程序量": str(manifest.get("source_line_count") or manifest.get("selected_source_line_count") or "待用户确认"),
+        "开发目的": (business.get("application_purpose") or f"建设{software_name}，为用户提供稳定、便捷的信息化操作能力，提升相关业务处理效率。") if business else f"建设{software_name}，为用户提供稳定、便捷的信息化操作能力，提升相关业务处理效率。",
+        "面向领域 / 行业": (business.get("industry") or "待用户确认") if business else "待用户确认",
+        "软件的主要功能": (business.get("main_functions") or summarize_features(analysis, software_name, business)) if business else summarize_features(analysis, software_name, business),
+        "技术特点": (business.get("technical_characteristics") or f"系统采用{framework_text}构建前端界面，结合模块化组件、路由组织、接口封装和状态管理实现业务功能，具备较好的可维护性和扩展性。") if business else f"系统采用{framework_text}构建前端界面，结合模块化组件、路由组织、接口封装和状态管理实现业务功能，具备较好的可维护性和扩展性。",
+        "软件的技术特点选项": (business.get("software_technical_option") or "原创") if business else "原创",
         "页数": str(manifest.get("total_pages") or "待用户确认"),
-        "软件分类": business.get("software_category") if business else "应用软件",
+        "软件分类": (business.get("software_category") or "应用软件") if business else "应用软件",
     }
     defaults.update({k: v for k, v in answers.items() if v})
     return defaults
@@ -221,21 +227,8 @@ def project_version_candidate(analysis: dict[str, Any]) -> str:
 
 
 def version_confirmation_hint(analysis: dict[str, Any], requested_version: str) -> str:
-    project_version = project_version_candidate(analysis)
     requested = normalize_version_label(requested_version or "V1.0")
-    if project_version and version_less_than_1(project_version):
-        return (
-            f"待用户确认（项目版本号为 {project_version}，软著首次提交通常建议从 V1.0 开始；"
-            f"请确认填写 V1.0 还是 {project_version}）"
-        )
-    if not project_version and version_less_than_1(requested):
-        return (
-            f"待用户确认（当前建议版本号为 {requested}，软著首次提交通常建议从 V1.0 开始；"
-            f"请确认填写 V1.0 还是 {requested}）"
-        )
-    if project_version and project_version != requested:
-        return f"待用户确认（项目版本号为 {project_version}，当前建议为 {requested}；请确认最终申报版本号）"
-    return f"待用户确认（建议：{requested}；请确认最终申报版本号）"
+    return f"待用户确认（建议：{requested}；请确认最终版本号）"
 
 
 def format_gb(size: int | None) -> str:
@@ -273,8 +266,8 @@ def current_hardware_environment() -> str:
     except OSError:
         pass
     if parts:
-        return "建议：" + "、".join(parts) + "（可按实际开发/运行设备调整）"
-    return "待用户确认（建议填写 CPU、内存、硬盘容量等硬件配置）"
+        return "、".join(parts)
+    return "待用户确认"
 
 
 def current_operating_system() -> str:
@@ -288,27 +281,27 @@ def current_operating_system() -> str:
         label = f"Linux {platform.release()}"
     else:
         label = f"{system} {platform.release()}".strip() or "待用户确认"
-    return f"建议：{label}（请按实际开发操作系统版本确认）"
+    return label
 
 
 def infer_ide_name(project: Path) -> str:
     if (project / ".idea").exists():
-        return "建议：WebStorm 或 IntelliJ IDEA（项目存在 .idea 配置，请按实际使用 IDE 确认）"
+        return "WebStorm 或 IntelliJ IDEA"
     if (project / ".vscode").exists():
-        return "建议：Visual Studio Code（项目存在 .vscode 配置，请按实际使用 IDE 确认）"
+        return "Visual Studio Code"
     if list(project.glob("*.code-workspace")):
-        return "建议：Visual Studio Code（项目存在工作区配置，请按实际使用 IDE 确认）"
-    return "建议：Visual Studio Code（可按实际改为 WebStorm、IntelliJ IDEA、Cursor 等 IDE）"
+        return "Visual Studio Code"
+    return "Visual Studio Code"
 
 
 def infer_runtime_os(analysis: dict[str, Any]) -> str:
     frameworks = set(analysis.get("frameworks") or [])
     deps = set((analysis.get("package") or {}).get("dependency_names") or [])
     if "Electron" in frameworks or "electron" in deps or "Tauri" in frameworks or "@tauri-apps/api" in deps:
-        return "建议：Windows 10/11 或 macOS 13及以上版本（请按实际桌面端运行环境确认）"
+        return "Windows 10/11 或 macOS 13及以上版本"
     if frameworks & {"Vue", "React", "Vite", "Next.js", "Nuxt", "Svelte", "Astro", "Angular"}:
-        return "建议：Windows 10/11 或 macOS 13及以上版本（请按实际客户端操作系统确认）"
-    return "建议：Windows 10/11 或 macOS 13及以上版本（请按实际运行操作系统版本确认）"
+        return "Windows 10/11 或 macOS 13及以上版本"
+    return "Windows 10/11 或 macOS 13及以上版本"
 
 
 def project_file(project: Path, relative: str) -> Path | None:
@@ -408,15 +401,15 @@ def infer_runtime_support(analysis: dict[str, Any], project: Path) -> str:
         if clean and clean not in unique:
             unique.append(clean)
     if unique:
-        return "建议：" + "、".join(unique) + "（请按实际部署环境确认）"
-    return "待用户确认（建议填写项目所需运行时、浏览器、数据库、中间件和外部服务）"
+        return "、".join(unique)
+    return "待用户确认"
 
 
 def write_application_md(path: Path, fields: dict[str, str], analysis: dict[str, Any], manifest: dict[str, Any], business: dict[str, Any] | None = None) -> None:
     lines = ["# 申请表信息", ""]
     for field in FIELD_ORDER:
         lines.append(f"➤{field}：{fields.get(field, '待用户确认')}")
-    pending = [field for field in FIELD_ORDER if "待用户确认" in fields.get(field, "")]
+    pending = [field for field in FIELD_ORDER if "待用户确认" in (fields.get(field) or "")]
 
     # Build warnings for common issues
     warnings: list[str] = []
