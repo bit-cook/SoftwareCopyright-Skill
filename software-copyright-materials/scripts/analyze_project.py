@@ -9,7 +9,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from common import CODE_EXTS, FRONTEND_EXTS, count_text_lines, iter_project_files, read_json, read_text, rel, write_json, normalize_title
+from common import CODE_EXTS, COPYRIGHT_CODE_EXTS, FRONTEND_EXTS, count_text_lines, iter_project_files, read_json, read_text, rel, write_json, normalize_title
 
 
 DEPENDENCY_FRAMEWORKS = {
@@ -133,11 +133,13 @@ def summarize_readme(project: Path) -> str:
 def analyze(project: Path) -> dict[str, Any]:
     project = project.resolve()
     package, package_path = load_package(project)
-    files = list(iter_project_files(project, CODE_EXTS))
+    files = list(iter_project_files(project, COPYRIGHT_CODE_EXTS))
     source_files = [p for p in files if p.suffix.lower() in FRONTEND_EXTS]
+    all_source_files = [p for p in files if p.suffix.lower() in COPYRIGHT_CODE_EXTS]
     class_counts: Counter[str] = Counter()
     extension_counts: Counter[str] = Counter()
     source_lines = 0
+    total_source_lines = 0
     categorized: dict[str, list[str]] = {
         "entry": [],
         "route": [],
@@ -159,6 +161,9 @@ def analyze(project: Path) -> dict[str, Any]:
         source_lines += count_text_lines(path)
         if category in {"route", "page", "entry"}:
             route_paths.extend(extract_route_paths(path))
+
+    for path in all_source_files:
+        total_source_lines += count_text_lines(path)
 
     package_name = ""
     scripts: dict[str, str] = {}
@@ -189,6 +194,8 @@ def analyze(project: Path) -> dict[str, Any]:
         "source": {
             "file_count": len(source_files),
             "line_count": source_lines,
+            "total_file_count": len(all_source_files),
+            "total_line_count": total_source_lines,
             "extension_counts": dict(sorted(extension_counts.items())),
             "category_counts": dict(sorted(class_counts.items())),
             "categorized_files": {k: v[:80] for k, v in categorized.items() if v},
@@ -334,7 +341,9 @@ def main() -> None:
     print(f"Frameworks: {', '.join(result['frameworks']) or 'unknown'}")
     print(f"Language: {result['language']}")
     print(f"Source files: {result['source']['file_count']}")
-    print(f"Source lines: {result['source']['line_count']}")
+    print(f"Source lines (non-blank): {result['source']['line_count']}")
+    print(f"Total source files: {result['source']['total_file_count']}")
+    print(f"Total source lines (non-blank): {result['source']['total_line_count']}")
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ from typing import Any
 from common import COPYRIGHT_CODE_EXTS, FRONTEND_EXTS, ensure_dir, iter_project_files, looks_binary, read_json, read_text, rel, safe_filename, write_json
 
 
-LINES_PER_PAGE = 60
+LINES_PER_PAGE = 50
 SPLIT_THRESHOLD_PAGES = 60
 
 

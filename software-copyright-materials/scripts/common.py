@@ -151,13 +151,15 @@ def write_json(path: Path, data: Any) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def count_text_lines(path: Path) -> int:
+def count_text_lines(path: Path, skip_blank: bool = True) -> int:
     try:
         text = read_text(path)
     except Exception:
         return 0
     if not text:
         return 0
+    if skip_blank:
+        return sum(1 for line in text.splitlines() if line.strip())
     return len(text.splitlines())
 
 

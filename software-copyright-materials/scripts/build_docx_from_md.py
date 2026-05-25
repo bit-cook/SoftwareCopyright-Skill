@@ -208,20 +208,20 @@ def configure_a4(document: Any) -> None:
     section = document.sections[0]
     section.page_width = Cm(21)
     section.page_height = Cm(29.7)
-    section.top_margin = Cm(1.5)
-    section.bottom_margin = Cm(1.5)
-    section.left_margin = Cm(1.6)
-    section.right_margin = Cm(1.4)
+    section.top_margin = Cm(2.54)
+    section.bottom_margin = Cm(2.54)
+    section.left_margin = Cm(3.17)
+    section.right_margin = Cm(2.54)
 
 
 def configure_code_a4(document: Any) -> None:
     section = document.sections[0]
     section.page_width = Cm(21)
     section.page_height = Cm(29.7)
-    section.top_margin = Cm(1.2)
-    section.bottom_margin = Cm(1.2)
-    section.left_margin = Cm(1.0)
-    section.right_margin = Cm(1.0)
+    section.top_margin = Cm(2.0)
+    section.bottom_margin = Cm(2.0)
+    section.left_margin = Cm(2.5)
+    section.right_margin = Cm(2.0)
 
 
 def add_page_field(paragraph: Any) -> None:
@@ -246,18 +246,45 @@ def add_page_field(paragraph: Any) -> None:
 def set_code_header(document: Any, software_name: str, version: str) -> None:
     section = document.sections[0]
     section.header.is_linked_to_previous = False
-    paragraph = section.header.paragraphs[0] if section.header.paragraphs else section.header.add_paragraph()
-    paragraph.text = ""
-    paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    paragraph.paragraph_format.space_before = Pt(0)
-    paragraph.paragraph_format.space_after = Pt(0)
-    paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.EXACTLY
-    paragraph.paragraph_format.line_spacing = Pt(12)
-    prefix = paragraph.add_run(f"{software_name} {version}    第 ")
+    header = section.header
+    header.paragraphs[0].text = "" if header.paragraphs else None
+
+    # Build a two-column header: software name on the left, page number on the right.
+    table = header.add_table(rows=1, cols=2, width=Cm(17.5))
+    table.autofit = True
+    left_cell = table.rows[0].cells[0]
+    right_cell = table.rows[0].cells[1]
+
+    left_para = left_cell.paragraphs[0]
+    left_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    left_para.paragraph_format.space_before = Pt(0)
+    left_para.paragraph_format.space_after = Pt(0)
+    left_para.paragraph_format.line_spacing_rule = WD_LINE_SPACING.EXACTLY
+    left_para.paragraph_format.line_spacing = Pt(12)
+    left_run = left_para.add_run(f"{software_name} {version}")
+    set_run_font(left_run, "SimSun", 8)
+
+    right_para = right_cell.paragraphs[0]
+    right_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    right_para.paragraph_format.space_before = Pt(0)
+    right_para.paragraph_format.space_after = Pt(0)
+    right_para.paragraph_format.line_spacing_rule = WD_LINE_SPACING.EXACTLY
+    right_para.paragraph_format.line_spacing = Pt(12)
+    prefix = right_para.add_run("第 ")
     set_run_font(prefix, "SimSun", 8)
-    add_page_field(paragraph)
-    suffix = paragraph.add_run(" 页")
+    add_page_field(right_para)
+    suffix = right_para.add_run(" 页")
     set_run_font(suffix, "SimSun", 8)
+
+    # Remove borders from the header table
+    for cell in table.rows[0].cells:
+        tc_pr = cell._tc.get_or_add_tcPr()
+        tc_borders = OxmlElement("w:tcBorders")
+        for border_name in ("top", "left", "bottom", "right"):
+            border = OxmlElement(f"w:{border_name}")
+            border.set(qn("w:val"), "nil")
+            tc_borders.append(border)
+        tc_pr.append(tc_borders)
 
 
 def build_code_docx_python(md_path: Path, out_path: Path, software_name: str, version: str) -> None:
@@ -328,15 +355,35 @@ def page_field_runs_xml() -> str:
 
 
 def header_xml(header_text: str) -> str:
+    """Build a two-column header: software name left, page number right."""
     escaped = html.escape(header_text)
+    # Use a borderless table for left/right alignment in header
     return f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:p>
-    <w:pPr><w:jc w:val="right"/><w:spacing w:after="0" w:line="240" w:lineRule="exact"/></w:pPr>
-    <w:r><w:rPr><w:rFonts w:ascii="SimSun" w:hAnsi="SimSun" w:eastAsia="SimSun"/><w:color w:val="{BLACK_RGB}"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr><w:t xml:space="preserve">{escaped}    第 </w:t></w:r>
-    {page_field_runs_xml()}
-    <w:r><w:rPr><w:rFonts w:ascii="SimSun" w:hAnsi="SimSun" w:eastAsia="SimSun"/><w:color w:val="{BLACK_RGB}"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr><w:t xml:space="preserve"> 页</w:t></w:r>
-  </w:p>
+  <w:tbl>
+    <w:tblPr>
+      <w:tblW w:w="5000" w:type="pct"/>
+      <w:tblBorders>
+        <w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/>
+      </w:tblBorders>
+    </w:tblPr>
+    <w:tr>
+      <w:tc>
+        <w:p>
+          <w:pPr><w:jc w:val="left"/><w:spacing w:after="0" w:line="240" w:lineRule="exact"/></w:pPr>
+          <w:r><w:rPr><w:rFonts w:ascii="SimSun" w:hAnsi="SimSun" w:eastAsia="SimSun"/><w:color w:val="{BLACK_RGB}"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr><w:t xml:space="preserve">{escaped}</w:t></w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:p>
+          <w:pPr><w:jc w:val="right"/><w:spacing w:after="0" w:line="240" w:lineRule="exact"/></w:pPr>
+          <w:r><w:rPr><w:rFonts w:ascii="SimSun" w:hAnsi="SimSun" w:eastAsia="SimSun"/><w:color w:val="{BLACK_RGB}"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr><w:t xml:space="preserve">第 </w:t></w:r>
+          {page_field_runs_xml()}
+          <w:r><w:rPr><w:rFonts w:ascii="SimSun" w:hAnsi="SimSun" w:eastAsia="SimSun"/><w:color w:val="{BLACK_RGB}"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr><w:t xml:space="preserve"> 页</w:t></w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+  </w:tbl>
 </w:hdr>"""
 
 
@@ -374,7 +421,7 @@ def minimal_docx(out_path: Path, body_xml: str, header_text: str | None = None) 
       <w:sectPr>
         {'<w:headerReference w:type="default" r:id="rIdHeader1"/>' if header_text else ''}
         <w:pgSz w:w="11906" w:h="16838"/>
-      <w:pgMar w:top="680" w:right="567" w:bottom="680" w:left="567" w:header="283" w:footer="283" w:gutter="0"/>
+      <w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1418" w:header="283" w:footer="283" w:gutter="0"/>
     </w:sectPr>
   </w:body>
 </w:document>"""
