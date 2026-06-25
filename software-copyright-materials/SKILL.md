@@ -16,7 +16,7 @@ allowed-tools: >
 metadata:
   short-description: 生成软著申请资料 Word/TXT
   author: Fokkyp
-  version: "1.1"
+  version: "1.2"
   repository: https://github.com/Fokkyp/SoftwareCopyright-Skill
 ---
 
